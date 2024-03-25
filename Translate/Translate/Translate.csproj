@@ -28,4 +28,14 @@
        </Content>
      </ItemGroup>
 
+     <ItemGroup>
+       <None Remove="logo.jpg" />
+     </ItemGroup>
+
+     <ItemGroup>
+       <Resource Include="Resource\logo.jpg">
+         <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+       </Resource>
+     </ItemGroup>
+
 </Project>

@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using Microsoft.Win32
+@using System.Windows
 @inject Kernel Kernel
 @inject IPopupService PopupService
 
@@ -14,6 +15,9 @@
     </MSelect>
     <MButton Depressed Color="primary" OnClick="TranslateAsync" Loading="Loading" Disabled="Loading" Style="margin-left: 20px;" Width="80">
         翻译
+    </MButton>
+    <MButton Depressed Color="primary" OnClick="CopyTranslationAsync" Loading="Loading" Disabled="Loading" Style="margin-left: 20px;" Width="120">
+        复制翻译内容
     </MButton>
     <MButton Depressed Color="red" OnClick="ClearTranslationAsync" Loading="Loading" Disabled="Loading" Style="margin-left: 20px;" Width="80">
         清空翻译
@@ -147,6 +151,8 @@
                     _ = InvokeAsync(StateHasChanged);
                 }
 
+                _outputText += Environment.NewLine;
+
                 history.RemoveAt(history.Count - 1);
                 size++;
                 // 计算进度
@@ -187,5 +193,12 @@
                 await PopupService.EnqueueSnackbarAsync("保存成功", AlertTypes.Success);
             }
         });
+    }
+
+    private async Task CopyTranslationAsync()
+    {
+        Clipboard.SetText(_outputText);
+
+        await PopupService.EnqueueSnackbarAsync("复制成功", AlertTypes.Success);
     }
 }

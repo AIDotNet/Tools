@@ -1,0 +1,57 @@
+﻿@page "/setting"
+@inject OpenAIConfig OpenAiConfig
+@inject IPopupService PopupService
+
+<MRow>
+    <MCol>
+        <MTextarea @bind-Value="OpenAiConfig.OpenAIUrl" Outlined Label="AI Url" NoResize Rows="1">
+        </MTextarea>
+    </MCol>
+</MRow>
+<MRow>
+    <MCol>
+        <MTextarea @bind-Value="OpenAiConfig.ApiKey" Outlined Label="AI Key" NoResize Rows="1">
+        </MTextarea>
+    </MCol>
+</MRow>
+<MRow>
+    <MCol>
+        <MSelect Items="Models"
+                 @bind-Value="@OpenAiConfig.Model"
+                 ItemText="u => u"
+                 ItemValue="u => u"
+                 Label="翻译模型"
+                 Dense
+                 Outlined></MSelect>
+    </MCol>
+</MRow>
+
+<MRow>
+    <MCol>
+        <MButton Block OnClick="Save" >
+            保存修改
+        </MButton>
+    </MCol>
+</MRow>
+
+@code
+{
+    private List<string> Models = new()
+    {
+        "gpt-3.5-turbo",
+        "gpt-4-0125-preview",
+        "gpt-4-1106-preview",
+        "gpt-4-1106-vision-preview",
+        "gpt-4",
+        "gpt-4-32k",
+        "gpt-3.5-turbo-0125",
+        "gpt-3.5-turbo-1106",
+        "gpt-3.5-turbo-16k"
+    };
+
+    private void Save()
+    {
+        OpenAiConfig.Save();
+        PopupService.EnqueueSnackbarAsync("保存成功", AlertTypes.Success);
+    }
+}

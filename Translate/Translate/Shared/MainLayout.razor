@@ -1,0 +1,53 @@
+﻿@inherits LayoutComponentBase
+
+<MApp Style="display: flex;">
+    <div style="display: flex;flex-direction: row;height: 100%;">
+        <MList Style="width: 160px;background-color: #EAE8E7;"
+            Nav
+            Dense>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <MAvatar Tile
+                         Size="56">
+                    <MImage Src="/translate.png"></MImage>
+                </MAvatar>
+                <h3>
+                    AI智能翻译
+                </h3>
+            </div>
+
+            <MListItemGroup @bind-Value="_selectedItem"
+                            Color="primary">
+
+                <MListItem Value="1" Href="/"> 
+                    <MListItemIcon>
+                        <MIcon>mdi-translate</MIcon>
+                    </MListItemIcon>
+
+                    <MListItemContent>
+                        <MListItemTitle>AI智能翻译</MListItemTitle>
+                    </MListItemContent>
+                </MListItem>
+
+                <MListItem Value="2" Href="/setting">
+                    <MListItemIcon>
+                        <MIcon>mdi-cog</MIcon>
+                    </MListItemIcon>
+
+                    <MListItemContent>
+                        <MListItemTitle>AI系统设置</MListItemTitle>
+                    </MListItemContent>
+                </MListItem>
+            </MListItemGroup>
+        </MList>
+        <div style="flex: 1;background-color: #F5F5F5;padding: 20px;">
+            <MErrorHandler>
+                @Body
+            </MErrorHandler>
+        </div>
+    </div>
+</MApp>
+
+@code {
+
+    public StringNumber _selectedItem { get; set; } = 1;
+}

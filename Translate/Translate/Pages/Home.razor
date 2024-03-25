@@ -1,0 +1,183 @@
+﻿@page "/"
+@using Microsoft.Win32
+@inject Kernel Kernel
+@inject IPopupService PopupService
+
+<MRow>
+    <MSelect Items="Languages"
+             @bind-Value="@_language"
+             ItemText="u => u"
+             ItemValue="u => u"
+             Label="翻译语言"
+             Dense
+             Outlined></MSelect>
+    <MButton Depressed Color="primary" OnClick="TranslateAsync" Loading="Loading" Disabled="Loading" Style="margin-left: 20px;" Width="80">
+        翻译
+    </MButton>
+    <MButton Depressed Color="red" OnClick="ClearTranslationAsync" Loading="Loading" Disabled="Loading" Style="margin-left: 20px;" Width="80">
+        清空翻译
+    </MButton>
+    <MMenu OffsetY >
+        <ActivatorContent>
+            <MButton Loading="Loading" Disabled="string.IsNullOrWhiteSpace(_outputText) && Loading" Style="margin-left: 20px;" Color="primary" @attributes="@context.Attrs">另存为</MButton>
+        </ActivatorContent>
+
+        <ChildContent>
+            <MList>
+                <MListItem OnClick="SaveMdFile">
+                    <MListItemContent>
+                        <MListItemTitle>
+                            保存为md文件
+                        </MListItemTitle>
+                    </MListItemContent>
+                </MListItem>
+            </MList>
+        </ChildContent>
+    </MMenu>
+</MRow>
+
+@if (Loading)
+{
+    <MProgressLinear @bind-Value="@ProgressBar" Height="20" Style="margin-bottom: 10px;">
+        <strong>@($"{context}%")</strong>
+    </MProgressLinear>
+}
+
+<MRow>
+    <MCol>
+        <MTextarea Label="需要翻译的内容"
+                   Height="@("calc(100vh - 120px)")"
+                   FullWidth
+                   @bind-Value="_inputText"
+                   NoResize
+                   Outlined></MTextarea>
+        <span style="position: absolute; bottom: 25px;">
+            需要翻译Token数量：@TokenHelper.ComputeToken(_inputText)
+        </span>
+    </MCol>
+    <MCol>
+        <MTextarea Label="翻译完成的内容"
+                   Height="@("calc(100vh - 120px)")"
+                   FullWidth
+                   @bind-Value="_outputText"
+                   Readonly
+                   NoResize
+                   Outlined></MTextarea>
+        <span style="position: absolute; bottom: 25px;">
+            翻译完成Token数量：@TokenHelper.ComputeToken(_outputText)
+        </span>
+    </MCol>
+</MRow>
+
+@code
+{
+    private string _language = "英文";
+
+    private readonly List<string> Languages =
+    [
+        "英文",
+    "中文",
+    "日文",
+    "韩文",
+    "法文",
+    "德文",
+    "俄文",
+    "西班牙文",
+    "葡萄牙文",
+    "意大利文",
+    "荷兰文",
+    "波兰文",
+    "瑞典文",
+    "丹麦文",
+    "芬兰文",
+    "捷克文",
+    "罗马尼亚文",
+    "希腊文",
+    "匈牙利文",
+    "瑞士文",
+    "挪威文",
+    "土耳其文",
+    "阿拉伯文",
+    "波斯文",
+    "希伯来文"
+    ];
+
+    private const string TranslatePrompt = "下面我发送的是一段文本，请翻译成{0}，不要带有任何的回复，不要破坏原有的文本格式，你只需要进行文本翻译即可，下面是我需要翻译的文本，也不要有内容缺失!";
+
+
+    private string _inputText = string.Empty;
+
+    private string _outputText = string.Empty;
+
+    private double ProgressBar;
+
+    private bool Loading = false;
+
+    private async Task TranslateAsync()
+    {
+        Loading = true;
+
+        _outputText = string.Empty;
+
+
+        var history = new ChatHistory();
+
+        history.AddSystemMessage(string.Format(TranslatePrompt, _language));
+
+        var chatCompletionService = Kernel.GetRequiredService<IChatCompletionService>();
+
+#pragma warning disable SKEXP0050 // 类型仅用于评估，在将来的更新中可能会被更改或删除。取消此诊断以继续。
+        var texts = TextChunker.SplitPlainTextLines(_inputText, 400);
+
+        var total = texts.Count;
+
+        foreach (var text in texts)
+        {
+            history.AddUserMessage(text);
+            await foreach (var content in chatCompletionService
+                               .GetStreamingChatMessageContentsAsync(
+                                   history))
+            {
+
+                _outputText += content.Content;
+                _ = InvokeAsync(StateHasChanged);
+            }
+
+            history.RemoveAt(history.Count - 1);
+
+            // 计算进度
+            ProgressBar = (double)(texts.Count - total) / texts.Count * 100;
+        }
+
+        Loading = false;
+    }
+
+    private async Task ClearTranslationAsync()
+    {
+        _outputText = string.Empty;
+
+        await Task.CompletedTask;
+    }
+
+    private async Task SaveMdFile()
+    {
+        await Task.Factory.StartNew(async () =>
+        {
+
+            //wpf save file dialog
+            var dialog = new SaveFileDialog
+            {
+                Filter = "Markdown files (*.md)|*.md",
+                DefaultExt = "md",
+                AddExtension = true
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                await File.WriteAllTextAsync(dialog.FileName, _outputText);
+
+                await PopupService.EnqueueSnackbarAsync("保存成功",AlertTypes.Success);
+            }
+        });
+    }
+}

@@ -10,14 +10,15 @@
              ItemValue="u => u"
              Label="翻译语言"
              Dense
-             Outlined></MSelect>
+             Outlined>
+    </MSelect>
     <MButton Depressed Color="primary" OnClick="TranslateAsync" Loading="Loading" Disabled="Loading" Style="margin-left: 20px;" Width="80">
         翻译
     </MButton>
     <MButton Depressed Color="red" OnClick="ClearTranslationAsync" Loading="Loading" Disabled="Loading" Style="margin-left: 20px;" Width="80">
         清空翻译
     </MButton>
-    <MMenu OffsetY >
+    <MMenu OffsetY>
         <ActivatorContent>
             <MButton Loading="Loading" Disabled="string.IsNullOrWhiteSpace(_outputText) && Loading" Style="margin-left: 20px;" Color="primary" @attributes="@context.Attrs">另存为</MButton>
         </ActivatorContent>
@@ -50,7 +51,8 @@
                    FullWidth
                    @bind-Value="_inputText"
                    NoResize
-                   Outlined></MTextarea>
+                   Outlined>
+        </MTextarea>
         <span style="position: absolute; bottom: 25px;">
             需要翻译Token数量：@TokenHelper.ComputeToken(_inputText)
         </span>
@@ -62,7 +64,8 @@
                    @bind-Value="_outputText"
                    Readonly
                    NoResize
-                   Outlined></MTextarea>
+                   Outlined>
+        </MTextarea>
         <span style="position: absolute; bottom: 25px;">
             翻译完成Token数量：@TokenHelper.ComputeToken(_outputText)
         </span>
@@ -76,30 +79,30 @@
     private readonly List<string> Languages =
     [
         "英文",
-    "中文",
-    "日文",
-    "韩文",
-    "法文",
-    "德文",
-    "俄文",
-    "西班牙文",
-    "葡萄牙文",
-    "意大利文",
-    "荷兰文",
-    "波兰文",
-    "瑞典文",
-    "丹麦文",
-    "芬兰文",
-    "捷克文",
-    "罗马尼亚文",
-    "希腊文",
-    "匈牙利文",
-    "瑞士文",
-    "挪威文",
-    "土耳其文",
-    "阿拉伯文",
-    "波斯文",
-    "希伯来文"
+        "中文",
+        "日文",
+        "韩文",
+        "法文",
+        "德文",
+        "俄文",
+        "西班牙文",
+        "葡萄牙文",
+        "意大利文",
+        "荷兰文",
+        "波兰文",
+        "瑞典文",
+        "丹麦文",
+        "芬兰文",
+        "捷克文",
+        "罗马尼亚文",
+        "希腊文",
+        "匈牙利文",
+        "瑞士文",
+        "挪威文",
+        "土耳其文",
+        "阿拉伯文",
+        "波斯文",
+        "希伯来文"
     ];
 
     private const string TranslatePrompt = "下面我发送的是一段文本，请翻译成{0}，不要带有任何的回复，不要破坏原有的文本格式，你只需要进行文本翻译即可，下面是我需要翻译的文本，也不要有内容缺失!";
@@ -119,37 +122,43 @@
 
         _outputText = string.Empty;
 
+        try
+        {
+            var history = new ChatHistory();
 
-        var history = new ChatHistory();
+            history.AddSystemMessage(string.Format(TranslatePrompt, _language));
 
-        history.AddSystemMessage(string.Format(TranslatePrompt, _language));
-
-        var chatCompletionService = Kernel.GetRequiredService<IChatCompletionService>();
+            var chatCompletionService = Kernel.GetRequiredService<IChatCompletionService>();
 
 #pragma warning disable SKEXP0050 // 类型仅用于评估，在将来的更新中可能会被更改或删除。取消此诊断以继续。
-        var texts = TextChunker.SplitPlainTextLines(_inputText, 400);
+            var texts = TextChunker.SplitPlainTextLines(_inputText, 200);
 
-        var total = texts.Count;
+            var total = texts.Count;
 
-        foreach (var text in texts)
-        {
-            history.AddUserMessage(text);
-            await foreach (var content in chatCompletionService
-                               .GetStreamingChatMessageContentsAsync(
-                                   history))
+            var size = 0;
+            foreach (var text in texts)
             {
+                history.AddUserMessage(text);
+                await foreach (var content in chatCompletionService
+                                   .GetStreamingChatMessageContentsAsync(
+                                       history))
+                {
+                    _outputText += content.Content;
+                    _ = InvokeAsync(StateHasChanged);
+                }
 
-                _outputText += content.Content;
-                _ = InvokeAsync(StateHasChanged);
+                history.RemoveAt(history.Count - 1);
+                size++;
+                // 计算进度
+                ProgressBar = (double)size / total * 100;
             }
 
-            history.RemoveAt(history.Count - 1);
-
-            // 计算进度
-            ProgressBar = (double)(texts.Count - total) / texts.Count * 100;
+            await PopupService.EnqueueSnackbarAsync("翻译完成", AlertTypes.Success);
         }
-
-        Loading = false;
+        finally
+        {
+            Loading = false;
+        }
     }
 
     private async Task ClearTranslationAsync()
@@ -163,7 +172,6 @@
     {
         await Task.Factory.StartNew(async () =>
         {
-
             //wpf save file dialog
             var dialog = new SaveFileDialog
             {
@@ -176,7 +184,7 @@
             {
                 await File.WriteAllTextAsync(dialog.FileName, _outputText);
 
-                await PopupService.EnqueueSnackbarAsync("保存成功",AlertTypes.Success);
+                await PopupService.EnqueueSnackbarAsync("保存成功", AlertTypes.Success);
             }
         });
     }
